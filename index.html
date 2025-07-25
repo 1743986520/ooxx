@@ -3,938 +3,418 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebRTC 井字棋</title>
+  <title>新一代 WebRTC 井字棋</title>
   <style>
+    :root {
+      --primary: #4a6bff;
+      --secondary: #ff6b6b;
+      --dark: #1a1a2e;
+      --light: #f8f9fa;
+    }
+    
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Segoe UI', system-ui, sans-serif;
     }
     
     body {
-      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
-      color: white;
+      background: linear-gradient(135deg, var(--dark), #16213e);
+      color: var(--light);
       min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
     }
     
-    .container {
-      background-color: rgba(0, 0, 0, 0.7);
-      border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-      padding: 30px;
-      max-width: 800px;
+    .game-container {
       width: 100%;
-      text-align: center;
+      max-width: 600px;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border-radius: 1rem;
+      padding: 2rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
     
     h1 {
-      font-size: 2.8rem;
-      margin-bottom: 20px;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-      background: linear-gradient(to right, #ff8a00, #da1b60);
+      text-align: center;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
       -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      color: transparent;
+      font-size: 2.5rem;
     }
     
-    .mode-group {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-      margin-bottom: 25px;
-      flex-wrap: wrap;
-    }
-    
-    .mode-btn {
-      background: rgba(255, 255, 255, 0.1);
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      color: white;
-      padding: 12px 25px;
-      border-radius: 50px;
-      font-size: 1.1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      min-width: 150px;
-    }
-    
-    .mode-btn:hover {
-      background: rgba(255, 255, 255, 0.2);
-      transform: translateY(-2px);
-    }
-    
-    .mode-btn.active {
-      background: linear-gradient(45deg, #ff416c, #ff4b2b);
-      border-color: transparent;
-      box-shadow: 0 5px 15px rgba(255, 75, 43, 0.4);
-    }
-    
-    .player-indicator {
-      display: flex;
-      justify-content: center;
-      gap: 30px;
-      margin-bottom: 30px;
-      font-size: 1.2rem;
-    }
-    
-    .player {
-      padding: 15px 30px;
-      border-radius: 15px;
-      background: rgba(255, 255, 255, 0.1);
-      min-width: 150px;
-      font-weight: 600;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .player::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 5px;
-      background: transparent;
-      transition: background 0.3s ease;
-    }
-    
-    .player.active::before {
-      background: linear-gradient(90deg, #ff416c, #ff4b2b);
-    }
-    
-    .player.X::after {
-      content: 'X';
-      color: #ff416c;
-      margin-left: 10px;
-      font-weight: 700;
-    }
-    
-    .player.O::after {
-      content: 'O';
-      color: #42a5f5;
-      margin-left: 10px;
-      font-weight: 700;
-    }
-    
-    .board-container {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 30px;
-    }
-    
-    .board {
+    .game-board {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      grid-gap: 12px;
-      max-width: 500px;
-      width: 100%;
-      background: rgba(255, 255, 255, 0.1);
-      padding: 20px;
-      border-radius: 15px;
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+      gap: 0.75rem;
+      margin: 2rem 0;
     }
     
     .cell {
       aspect-ratio: 1;
-      background: rgba(0, 0, 0, 0.5);
-      border-radius: 10px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 5rem;
-      font-weight: bold;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 0.5rem;
+      display: grid;
+      place-items: center;
+      font-size: 3.5rem;
       cursor: pointer;
       transition: all 0.2s ease;
-      position: relative;
-      overflow: hidden;
+      border: 2px solid transparent;
     }
     
     .cell:hover {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.1);
       transform: scale(1.03);
     }
     
     .cell.X {
-      color: #ff416c;
-      text-shadow: 0 0 15px rgba(255, 65, 108, 0.7);
+      color: var(--primary);
+      text-shadow: 0 0 15px rgba(74, 107, 255, 0.7);
     }
     
     .cell.O {
-      color: #42a5f5;
-      text-shadow: 0 0 15px rgba(66, 165, 245, 0.7);
-    }
-    
-    .status {
-      font-size: 1.8rem;
-      font-weight: 600;
-      margin-bottom: 25px;
-      min-height: 50px;
-      padding: 10px;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.1);
-    }
-    
-    .status.win {
-      color: #4caf50;
-      background: rgba(76, 175, 80, 0.15);
-      animation: pulse 1.5s infinite;
-    }
-    
-    .status.draw {
-      color: #ff9800;
-      background: rgba(255, 152, 0, 0.15);
-    }
-    
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-      100% { transform: scale(1); }
+      color: var(--secondary);
+      text-shadow: 0 0 15px rgba(255, 107, 107, 0.7);
     }
     
     .connection-panel {
-      margin: 30px 0;
-      padding: 25px;
-      background: rgba(0, 0, 0, 0.4);
-      border-radius: 15px;
-      text-align: center;
-    }
-    
-    .connection-box {
-      max-width: 600px;
-      margin: 0 auto;
-    }
-    
-    .connection-box h3 {
-      font-size: 1.6rem;
-      margin-bottom: 20px;
-      color: #42a5f5;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      margin-top: 1.5rem;
     }
     
     .connection-status {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 15px;
-      margin-bottom: 25px;
-      font-size: 1.2rem;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
     }
     
     .status-indicator {
-      width: 20px;
-      height: 20px;
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
       background: #f44336;
     }
     
-    .status-indicator.connecting {
-      background: #ff9800;
-      animation: blink 1.5s infinite;
-    }
-    
     .status-indicator.connected {
       background: #4caf50;
+      animation: pulse 1.5s infinite;
     }
     
-    @keyframes blink {
-      0% { opacity: 1; }
-      50% { opacity: 0.5; }
-      100% { opacity: 1; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
     }
     
     .room-controls {
       display: flex;
-      gap: 15px;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
     }
     
-    .room-input {
+    input, button {
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      border: none;
+      font-size: 1rem;
+    }
+    
+    input {
       flex: 1;
-      max-width: 250px;
-      padding: 15px;
-      font-size: 1.1rem;
-      border: 2px solid rgba(255, 255, 255, 0.3);
       background: rgba(0, 0, 0, 0.3);
       color: white;
-      border-radius: 10px;
-      outline: none;
-    }
-    
-    .room-input:focus {
-      border-color: #42a5f5;
-      box-shadow: 0 0 10px rgba(66, 165, 245, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
     
     button {
-      padding: 15px 30px;
-      font-size: 1.1rem;
-      font-weight: 600;
-      border: none;
-      border-radius: 10px;
       cursor: pointer;
-      transition: all 0.3s ease;
+      font-weight: 600;
+      transition: all 0.2s;
     }
     
-    .secondary {
-      background: linear-gradient(45deg, #2196f3, #21cbf3);
+    button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .btn-primary {
+      background: var(--primary);
       color: white;
-      min-width: 150px;
     }
     
-    .secondary:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 7px 15px rgba(33, 150, 243, 0.4);
-    }
-    
-    #reset {
-      background: linear-gradient(45deg, #ff416c, #ff4b2b);
+    .btn-secondary {
+      background: var(--secondary);
       color: white;
-      padding: 15px 40px;
-      font-size: 1.2rem;
-      margin-top: 20px;
-      width: 100%;
-      max-width: 300px;
-    }
-    
-    #reset:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 7px 15px rgba(255, 75, 43, 0.4);
-    }
-    
-    .instructions {
-      text-align: left;
-      background: rgba(0, 0, 0, 0.3);
-      padding: 20px;
-      border-radius: 10px;
-      margin-top: 25px;
-      font-size: 1.1rem;
-    }
-    
-    .instructions strong {
-      display: block;
-      margin-bottom: 15px;
-      color: #ff9800;
-      font-size: 1.2rem;
-    }
-    
-    .instructions ol {
-      padding-left: 25px;
-    }
-    
-    .instructions li {
-      margin-bottom: 10px;
-      line-height: 1.5;
     }
     
     @media (max-width: 600px) {
-      .container {
-        padding: 15px;
-      }
-      
-      h1 {
-        font-size: 2rem;
-      }
-      
-      .mode-btn {
-        padding: 10px 15px;
-        font-size: 0.9rem;
-        min-width: 120px;
-      }
-      
-      .player {
-        padding: 10px 15px;
-        font-size: 1rem;
-        min-width: 120px;
+      .game-container {
+        padding: 1rem;
       }
       
       .cell {
-        font-size: 3.5rem;
-      }
-      
-      .status {
-        font-size: 1.4rem;
-      }
-      
-      .room-input, .secondary {
-        padding: 12px;
-        font-size: 1rem;
+        font-size: 2.5rem;
       }
     }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="game-container">
     <h1>WebRTC 井字棋</h1>
     
-    <div class="mode-group">
-      <button class="mode-btn active" data-mode="hotseat">本地雙人</button>
-      <button class="mode-btn" data-mode="pve">單人模式</button>
-      <button class="mode-btn" data-mode="online">線上對戰</button>
+    <div class="game-board" id="board">
+      <div class="cell" data-index="0"></div>
+      <div class="cell" data-index="1"></div>
+      <div class="cell" data-index="2"></div>
+      <div class="cell" data-index="3"></div>
+      <div class="cell" data-index="4"></div>
+      <div class="cell" data-index="5"></div>
+      <div class="cell" data-index="6"></div>
+      <div class="cell" data-index="7"></div>
+      <div class="cell" data-index="8"></div>
     </div>
     
-    <div class="player-indicator">
-      <div class="player X active">玩家 X</div>
-      <div class="player O">玩家 O</div>
-    </div>
-    
-    <div class="board-container">
-      <div class="board" id="board">
-        <div class="cell" data-index="0"></div>
-        <div class="cell" data-index="1"></div>
-        <div class="cell" data-index="2"></div>
-        <div class="cell" data-index="3"></div>
-        <div class="cell" data-index="4"></div>
-        <div class="cell" data-index="5"></div>
-        <div class="cell" data-index="6"></div>
-        <div class="cell" data-index="7"></div>
-        <div class="cell" data-index="8"></div>
+    <div class="connection-panel">
+      <div class="connection-status">
+        <div class="status-indicator" id="statusIndicator"></div>
+        <span id="connectionStatus">未连接</span>
       </div>
-    </div>
-    
-    <div class="status" id="status">玩家 X 回合</div>
-    
-    <div class="connection-panel" id="connectionPanel" style="display: none;">
-      <div class="connection-box">
-        <h3>線上對戰</h3>
-        <div class="connection-status">
-          <div class="status-indicator" id="statusIndicator"></div>
-          <span id="connectionStatus">未連接</span>
-        </div>
-        
-        <div class="room-controls">
-          <input type="text" id="roomId" class="room-input" placeholder="輸入房間號">
-          <button id="joinRoom" class="secondary">加入房間</button>
-          <button id="createRoom" class="secondary">創建房間</button>
-        </div>
-        
-        <div class="instructions">
-          <strong>線上對戰操作步驟：</strong>
-          <ol>
-            <li>點擊"創建房間"生成一個房間號並分享給對方</li>
-            <li>或輸入對方分享的房間號，點擊"加入房間"</li>
-            <li>等待對方加入後開始遊戲</li>
-            <li>玩家X先行，玩家O後行</li>
-            <li>遊戲結束後可點擊"重新開始"按鈕繼續遊戲</li>
-          </ol>
-        </div>
+      
+      <div class="room-controls">
+        <input type="text" id="roomId" placeholder="输入房间号">
+        <button class="btn-secondary" id="joinRoom">加入房间</button>
+        <button class="btn-primary" id="createRoom">创建房间</button>
       </div>
+      
+      <button class="btn-primary" id="reset" style="width: 100%">重新开始</button>
     </div>
-    
-    <button id="reset">重新開始</button>
   </div>
 
   <script>
-    // 遊戲狀態管理
-    const game = {
-      board: Array(9).fill(null),
-      currentPlayer: "X",
-      isGameOver: false,
-      mode: "hotseat",
-      peer: null,
-      isHost: false,
-      playerRole: "X",
-      dataChannel: null,
-      socket: null,
-
-      // 初始化遊戲
-      init() {
+    class TicTacToeGame {
+      constructor() {
+        this.board = Array(9).fill(null);
+        this.currentPlayer = 'X';
+        this.isGameOver = false;
+        this.peer = null;
+        this.socket = null;
+        this.roomId = null;
+        this.isHost = false;
+        
+        this.initElements();
+        this.initEventListeners();
         this.render();
-        this.bindEvents();
-        this.updatePlayerIndicator();
-      },
-
-      // 渲染棋盤
-      render() {
-        const cells = document.querySelectorAll('.cell');
-        
-        this.board.forEach((cell, index) => {
-          cells[index].className = 'cell';
-          if (cell === "X") {
-            cells[index].classList.add('X');
-            cells[index].textContent = 'X';
-          } else if (cell === "O") {
-            cells[index].classList.add('O');
-            cells[index].textContent = 'O';
-          } else {
-            cells[index].textContent = '';
-          }
-          
-          // 添加或移除點擊事件
-          if (!this.isGameOver && 
-              (this.mode === "hotseat" || 
-               (this.mode === "pve" && this.currentPlayer === "X") ||
-               (this.mode === "online" && this.currentPlayer === this.playerRole))
-          ) {
-            cells[index].addEventListener('click', (e) => this.handlePlayerMove(e, index));
-          } else {
-            cells[index].removeEventListener('click', (e) => this.handlePlayerMove(e, index));
-          }
-        });
-        
-        const statusEl = document.getElementById("status");
-        statusEl.className = "status";
-        
-        if (this.isGameOver) {
-          const winner = this.getWinner();
-          if (winner) {
-            statusEl.textContent = `玩家 ${winner} 獲勝！`;
-            statusEl.classList.add("win");
-          } else {
-            statusEl.textContent = "平局！";
-            statusEl.classList.add("draw");
-          }
-        } else {
-          statusEl.textContent = `玩家 ${this.currentPlayer} 回合`;
-        }
-      },
+      }
       
-      updatePlayerIndicator() {
-        document.querySelectorAll(".player").forEach(playerEl => {
-          playerEl.classList.remove("active");
-          if (playerEl.textContent.includes(this.currentPlayer)) {
-            playerEl.classList.add("active");
-          }
+      initElements() {
+        this.boardEl = document.getElementById('board');
+        this.cells = Array.from(document.querySelectorAll('.cell'));
+        this.statusIndicator = document.getElementById('statusIndicator');
+        this.connectionStatus = document.getElementById('connectionStatus');
+        this.roomIdInput = document.getElementById('roomId');
+        this.joinBtn = document.getElementById('joinRoom');
+        this.createBtn = document.getElementById('createRoom');
+        this.resetBtn = document.getElementById('reset');
+      }
+      
+      initEventListeners() {
+        this.cells.forEach(cell => {
+          cell.addEventListener('click', (e) => this.handleMove(e));
         });
-      },
-
-      handlePlayerMove(e, index) {
-        if (this.board[index] !== null || this.isGameOver) return;
+        
+        this.joinBtn.addEventListener('click', () => this.joinRoom());
+        this.createBtn.addEventListener('click', () => this.createRoom());
+        this.resetBtn.addEventListener('click', () => this.resetGame());
+      }
+      
+      // 游戏逻辑
+      handleMove(e) {
+        const index = e.target.dataset.index;
+        if (this.board[index] || this.isGameOver) return;
         
         this.board[index] = this.currentPlayer;
-        
-        if (this.mode === "online" && this.dataChannel && this.dataChannel.readyState === "open") {
-          this.sendNetworkMessage({
-            type: "move",
-            index: index,
-            player: this.currentPlayer
-          });
-        }
-        
         this.render();
-        this.updatePlayerIndicator();
         
         if (this.checkWin(this.currentPlayer)) {
           this.isGameOver = true;
-          this.render();
+          alert(`玩家 ${this.currentPlayer} 获胜!`);
           return;
         }
         
         if (this.checkDraw()) {
           this.isGameOver = true;
-          this.render();
+          alert('平局!');
           return;
         }
         
-        if (this.mode === "hotseat" || this.mode === "online") {
-          this.currentPlayer = this.currentPlayer === "X" ? "O" : "X";
-          this.updatePlayerIndicator();
-        } else if (this.mode === "pve") {
-          this.currentPlayer = "O";
-          this.updatePlayerIndicator();
-          setTimeout(() => this.aiMove(), 500);
-        }
-      },
-
-      aiMove() {
-        if (this.isGameOver) return;
-        
-        const winPos = this.findWinOrBlock("O");
-        if (winPos !== -1) {
-          this.board[winPos] = "O";
-          this.render();
-          this.checkGameEnd("O");
-          return;
-        }
-        
-        const blockPos = this.findWinOrBlock("X");
-        if (blockPos !== -1) {
-          this.board[blockPos] = "O";
-          this.render();
-          this.checkGameEnd("O");
-          return;
-        }
-        
-        if (this.board[4] === null) {
-          this.board[4] = "O";
-          this.render();
-          this.checkGameEnd("O");
-          return;
-        }
-        
-        const corners = [0, 2, 6, 8].filter(i => this.board[i] === null);
-        if (corners.length > 0) {
-          const corner = corners[Math.floor(Math.random() * corners.length)];
-          this.board[corner] = "O";
-          this.render();
-          this.checkGameEnd("O");
-          return;
-        }
-        
-        const edges = [1, 3, 5, 7].filter(i => this.board[i] === null);
-        if (edges.length > 0) {
-          const edge = edges[Math.floor(Math.random() * edges.length)];
-          this.board[edge] = "O";
-          this.render();
-          this.checkGameEnd("O");
-        }
-      },
-
-      checkGameEnd(aiPlayer) {
-        if (this.checkWin(aiPlayer)) {
-          this.isGameOver = true;
-          this.render();
-        } else if (this.checkDraw()) {
-          this.isGameOver = true;
-          this.render();
-        } else {
-          this.currentPlayer = "X";
-          this.updatePlayerIndicator();
-          this.render();
-        }
-      },
-
+        this.currentPlayer = this.currentPlayer === 'X' ? 'O' : 'X';
+      }
+      
       checkWin(player) {
         const winPatterns = [
-          [0,1,2], [3,4,5], [6,7,8],
-          [0,3,6], [1,4,7], [2,5,8],
-          [0,4,8], [2,4,6]
+          [0,1,2], [3,4,5], [6,7,8], // 行
+          [0,3,6], [1,4,7], [2,5,8], // 列
+          [0,4,8], [2,4,6] // 对角线
         ];
+        
         return winPatterns.some(pattern => 
           pattern.every(index => this.board[index] === player)
         );
-      },
-
+      }
+      
       checkDraw() {
         return this.board.every(cell => cell !== null);
-      },
-
-      findWinOrBlock(player) {
-        const winPatterns = [
-          [0,1,2], [3,4,5], [6,7,8],
-          [0,3,6], [1,4,7], [2,5,8],
-          [0,4,8], [2,4,6]
-        ];
-        
-        for (const pattern of winPatterns) {
-          const [a, b, c] = pattern;
-          if (
-            this.board[a] === player && 
-            this.board[b] === player && 
-            this.board[c] === null
-          ) return c;
-          if (
-            this.board[a] === player && 
-            this.board[c] === player && 
-            this.board[b] === null
-          ) return b;
-          if (
-            this.board[b] === player && 
-            this.board[c] === player && 
-            this.board[a] === null
-          ) return a;
-        }
-        return -1;
-      },
-
-      getWinner() {
-        if (this.checkWin("X")) return "X";
-        if (this.checkWin("O")) return "O";
-        return null;
-      },
-
-      reset() {
-        this.board = Array(9).fill(null);
-        this.currentPlayer = "X";
-        this.isGameOver = false;
-        
-        if (this.mode === "online" && this.dataChannel && this.dataChannel.readyState === "open") {
-          this.sendNetworkMessage({ type: "reset" });
-          if (this.isHost) {
-            this.sendNetworkMessage({ 
-              type: "role",
-              role: this.playerRole
-            });
-          }
-        }
-        
-        this.updatePlayerIndicator();
-        this.render();
-      },
-
-      switchMode(mode) {
-        this.mode = mode;
-        document.querySelectorAll(".mode-btn").forEach(btn => {
-          btn.classList.remove("active");
-          if (btn.dataset.mode === mode) {
-            btn.classList.add("active");
+      }
+      
+      render() {
+        this.cells.forEach((cell, index) => {
+          cell.textContent = this.board[index] || '';
+          cell.className = 'cell';
+          if (this.board[index]) {
+            cell.classList.add(this.board[index]);
           }
         });
-        
-        const connectionPanel = document.getElementById("connectionPanel");
-        if (mode === "online") {
-          connectionPanel.style.display = "block";
-          this.resetConnectionUI();
-        } else {
-          connectionPanel.style.display = "none";
-          if (this.peer) {
-            this.peer.destroy();
-            this.peer = null;
-            this.dataChannel = null;
-          }
-          if (this.socket) {
-            this.socket.close();
-            this.socket = null;
-          }
-          this.updateConnectionStatus("未連接", "disconnected");
-        }
-        
-        this.reset();
-      },
-
-      resetConnectionUI() {
-        document.getElementById("roomId").value = "";
-        this.updateConnectionStatus("未連接", "disconnected");
-      },
-
-      initWebSocket() {
-        document.getElementById("createRoom").addEventListener("click", () => {
-          this.createRoom();
-        });
-        
-        document.getElementById("joinRoom").addEventListener("click", () => {
-          this.joinRoom();
-        });
-      },
-
-      createRoom() {
+      }
+      
+      // 网络连接部分
+      async createRoom() {
         this.isHost = true;
-        this.playerRole = "X";
-        this.resetConnectionUI();
+        this.roomId = Math.random().toString(36).substr(2, 6).toUpperCase();
+        this.roomIdInput.value = this.roomId;
         
-        // 生成隨機房間號
-        const roomId = Math.random().toString(36).substr(2, 6).toUpperCase();
-        document.getElementById("roomId").value = roomId;
+        this.updateConnectionStatus('正在连接...', 'connecting');
         
-        // 連接到 WebSocket 服務器
-        const wsServer = "wss://hongyuwei.onrender.com";
-        console.log("正在连接到:", wsServer);
-        
-        this.socket = new WebSocket(wsServer);
-        
-        this.socket.onopen = () => {
-          console.log("WebSocket连接已建立");
-          this.socket.send(JSON.stringify({ type: "create", roomId }));
-          this.updateConnectionStatus("等待玩家加入房間 " + roomId, "connecting");
-          this.setupPeer(true);
-        };
-        
-        this.socket.onmessage = (event) => {
-          console.log("收到消息:", event.data);
-          const msg = JSON.parse(event.data);
-          this.handleSocketMessage(msg);
-        };
-        
-        this.socket.onclose = () => {
-          console.log("WebSocket连接已关闭");
-          this.updateConnectionStatus("服務器連接關閉", "disconnected");
-        };
-        
-        this.socket.onerror = (err) => {
-          console.error("WebSocket錯誤:", err);
-          this.updateConnectionStatus("服務器連接錯誤", "disconnected");
-        };
-      },
-
-      joinRoom() {
-        this.isHost = false;
-        this.playerRole = "O";
-        const roomId = document.getElementById("roomId").value.trim();
-        if (!roomId) {
-          alert("請輸入房間號");
-          return;
+        try {
+          await this.initWebSocket();
+          await this.initWebRTC(true);
+          this.updateConnectionStatus('等待玩家加入...', 'connected');
+        } catch (error) {
+          console.error('创建房间失败:', error);
+          this.updateConnectionStatus('连接失败', 'error');
         }
+      }
+      
+      async joinRoom() {
+        this.roomId = this.roomIdInput.value.trim();
+        if (!this.roomId) return alert('请输入房间号');
         
-        const wsServer = "wss://hongyuwei.onrender.com";
-        console.log("正在连接到:", wsServer);
+        this.updateConnectionStatus('正在加入房间...', 'connecting');
         
-        this.socket = new WebSocket(wsServer);
-        
-        this.socket.onopen = () => {
-          console.log("WebSocket连接已建立");
-          this.socket.send(JSON.stringify({ type: "join", roomId }));
-          this.updateConnectionStatus("正在加入房間 " + roomId, "connecting");
-          this.setupPeer(false);
-        };
-        
-        this.socket.onmessage = (event) => {
-          console.log("收到消息:", event.data);
-          const msg = JSON.parse(event.data);
-          this.handleSocketMessage(msg);
-        };
-        
-        this.socket.onclose = () => {
-          console.log("WebSocket连接已关闭");
-          this.updateConnectionStatus("服務器連接關閉", "disconnected");
-        };
-        
-        this.socket.onerror = (err) => {
-          console.error("WebSocket錯誤:", err);
-          this.updateConnectionStatus("服務器連接錯誤", "disconnected");
-        };
-      },
-
-      setupPeer(initiator) {
-        console.log("初始化WebRTC连接，initiator:", initiator);
-        
-        // 修复STUN服务器配置
-        const config = {
-          iceServers: [
-            { 
-              urls: [
-                "stun:stun.l.google.com:19302",
-                "stun:global.stun.twilio.com:3478?transport=udp"
-              ]
-            }
-          ]
-        };
-        
-        this.peer = new SimplePeer({
-          initiator,
-          trickle: false,
-          config: config
+        try {
+          await this.initWebSocket();
+          await this.initWebRTC(false);
+          this.updateConnectionStatus('已连接到房间', 'connected');
+        } catch (error) {
+          console.error('加入房间失败:', error);
+          this.updateConnectionStatus('连接失败', 'error');
+        }
+      }
+      
+      initWebSocket() {
+        return new Promise((resolve, reject) => {
+          const wsUrl = 'wss://hongyuwei.onrender.com';
+          this.socket = new WebSocket(wsUrl);
+          
+          this.socket.onopen = () => {
+            console.log('WebSocket连接已建立');
+            resolve();
+          };
+          
+          this.socket.onerror = (error) => {
+            console.error('WebSocket错误:', error);
+            reject(error);
+          };
+          
+          this.socket.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            this.handleWebSocketMessage(message);
+          };
         });
-        
-        this.peer.on("signal", (data) => {
-          console.log("发送信令数据:", data);
-          if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      }
+      
+      initWebRTC(initiator) {
+        return new Promise((resolve) => {
+          const iceServers = [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { 
+              urls: 'turn:numb.viagenie.ca',
+              credential: 'muazkh',
+              username: 'webrtc@live.com'
+            }
+          ];
+          
+          this.peer = new SimplePeer({
+            initiator,
+            trickle: true,
+            config: { iceServers }
+          });
+          
+          this.peer.on('signal', data => {
             this.socket.send(JSON.stringify({
-              type: "signal",
-              roomId: document.getElementById("roomId").value,
+              type: 'signal',
+              roomId: this.roomId,
               data
             }));
-          }
-        });
-        
-        this.peer.on("connect", () => {
-          console.log("WebRTC连接已建立");
-          this.dataChannel = this.peer;
-          this.updateConnectionStatus("已連接到對方玩家", "connected");
-          this.reset();
+          });
           
-          if (this.isHost) {
-            this.sendNetworkMessage({ 
-              type: "role",
-              role: this.playerRole
-            });
-          }
+          this.peer.on('connect', () => {
+            console.log('WebRTC连接已建立');
+            resolve();
+          });
+          
+          this.peer.on('data', data => {
+            const message = JSON.parse(data);
+            this.handleDataMessage(message);
+          });
+          
+          this.peer.on('error', error => {
+            console.error('WebRTC错误:', error);
+          });
         });
-        
-        this.peer.on("data", (data) => {
-          try {
-            console.log("收到网络消息:", data);
-            const msg = JSON.parse(data);
-            this.handleNetworkMessage(msg);
-          } catch (e) {
-            console.error("數據解析錯誤:", e);
-          }
-        });
-        
-        this.peer.on("close", () => {
-          console.log("WebRTC连接已关闭");
-          this.updateConnectionStatus("連接已關閉", "disconnected");
-          this.dataChannel = null;
-        });
-        
-        this.peer.on("error", (err) => {
-          console.error("WebRTC錯誤:", err);
-          this.updateConnectionStatus(`連接錯誤: ${err.message}`, "disconnected");
-        });
-      },
-
-      handleSocketMessage(msg) {
-        console.log("处理服务器消息:", msg);
-        switch (msg.type) {
-          case "roomCreated":
-            alert("房間創建成功，房間號: " + msg.roomId + "\n請分享給對方");
-            break;
-          case "roomJoined":
-            this.updateConnectionStatus("房間已加入，等待連接...", "connecting");
-            break;
-          case "signal":
-            if (this.peer) {
-              this.peer.signal(msg.data);
-            }
-            break;
-          case "error":
-            alert("錯誤: " + msg.message);
-            this.updateConnectionStatus("連接錯誤", "disconnected");
-            break;
-        }
-      },
-
-      handleNetworkMessage(msg) {
-        console.log("处理网络消息:", msg);
-        switch (msg.type) {
-          case "move":
-            this.board[msg.index] = msg.player;
-            this.currentPlayer = this.currentPlayer === "X" ? "O" : "X";
-            this.render();
-            this.updatePlayerIndicator();
-            break;
-          case "reset":
-            this.reset();
-            break;
-          case "role":
-            this.playerRole = msg.role;
-            break;
-        }
-      },
-
-      sendNetworkMessage(msg) {
-        if (this.dataChannel && this.dataChannel.readyState === "open") {
-          try {
-            console.log("发送网络消息:", msg);
-            this.dataChannel.send(JSON.stringify(msg));
-          } catch (e) {
-            console.error("發送消息失敗:", e);
-          }
-        }
-      },
-
-      updateConnectionStatus(text, status) {
-        console.log("更新连接状态:", text, status);
-        document.getElementById("connectionStatus").textContent = text;
-        const indicator = document.getElementById("statusIndicator");
-        indicator.className = "status-indicator";
-        
-        if (status === "connecting") {
-          indicator.classList.add("connecting");
-        } else if (status === "connected") {
-          indicator.classList.add("connected");
-        }
-      },
-
-      bindEvents() {
-        document.getElementById("reset").addEventListener("click", () => this.reset());
-        
-        document.querySelectorAll(".mode-btn").forEach(btn => {
-          btn.addEventListener("click", () => this.switchMode(btn.dataset.mode));
-        });
-        
-        this.initWebSocket();
       }
-    };
-    
-    document.addEventListener("DOMContentLoaded", () => {
-      game.init();
+      
+      handleWebSocketMessage(message) {
+        if (message.type === 'signal' && this.peer) {
+          this.peer.signal(message.data);
+        }
+      }
+      
+      handleDataMessage(message) {
+        // 处理游戏数据消息
+        console.log('收到数据:', message);
+      }
+      
+      updateConnectionStatus(text, status) {
+        this.connectionStatus.textContent = text;
+        this.statusIndicator.className = 'status-indicator';
+        
+        if (status === 'connected') {
+          this.statusIndicator.classList.add('connected');
+        }
+      }
+      
+      resetGame() {
+        this.board = Array(9).fill(null);
+        this.currentPlayer = 'X';
+        this.isGameOver = false;
+        this.render();
+      }
+    }
+
+    // 初始化游戏
+    document.addEventListener('DOMContentLoaded', () => {
+      new TicTacToeGame();
     });
   </script>
-  <!-- 引入 SimplePeer -->
+  
+  <!-- 使用最新版SimplePeer -->
   <script src="https://cdn.jsdelivr.net/npm/simple-peer@9.11.1/simplepeer.min.js"></script>
 </body>
 </html>
