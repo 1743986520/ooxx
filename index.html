@@ -446,7 +446,6 @@
         this.render();
         this.bindEvents();
         this.updatePlayerIndicator();
-        this.initWebSocket();
       },
 
       // 渲染棋盤
@@ -722,7 +721,8 @@
         document.getElementById("roomId").value = roomId;
         
         // 連接到 WebSocket 服務器
-        this.socket = new WebSocket("wss://your-websocket-server.com"); // 替換為你的 WebSocket 服務器地址
+        const wsServer = "wss://hongyuwei.onrender.com"; // 修改為你的Render地址
+        this.socket = new WebSocket(wsServer);
         this.socket.onopen = () => {
           this.socket.send(JSON.stringify({ type: "create", roomId }));
           this.updateConnectionStatus("等待玩家加入房間 " + roomId, "connecting");
@@ -753,7 +753,8 @@
           return;
         }
         
-        this.socket = new WebSocket("wss://your-websocket-server.com"); // 替換為你的 WebSocket 服務器地址
+        const wsServer = "wss://hongyuwei.onrender.com"; // 修改為你的Render地址
+        this.socket = new WebSocket(wsServer);
         this.socket.onopen = () => {
           this.socket.send(JSON.stringify({ type: "join", roomId }));
           this.updateConnectionStatus("正在加入房間 " + roomId, "connecting");
@@ -892,6 +893,8 @@
         document.querySelectorAll(".mode-btn").forEach(btn => {
           btn.addEventListener("click", () => this.switchMode(btn.dataset.mode));
         });
+        
+        this.initWebSocket();
       }
     };
     
