@@ -5,16 +5,365 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WebRTC 井字棋</title>
   <style>
-    /* 原有的 CSS 保持不變，僅添加房間號輸入框的樣式 */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    
+    .container {
+      background-color: rgba(0, 0, 0, 0.7);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      padding: 30px;
+      max-width: 800px;
+      width: 100%;
+      text-align: center;
+    }
+    
+    h1 {
+      font-size: 2.8rem;
+      margin-bottom: 20px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      background: linear-gradient(to right, #ff8a00, #da1b60);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .mode-group {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+    }
+    
+    .mode-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      padding: 12px 25px;
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      min-width: 150px;
+    }
+    
+    .mode-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+    
+    .mode-btn.active {
+      background: linear-gradient(45deg, #ff416c, #ff4b2b);
+      border-color: transparent;
+      box-shadow: 0 5px 15px rgba(255, 75, 43, 0.4);
+    }
+    
+    .player-indicator {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-bottom: 30px;
+      font-size: 1.2rem;
+    }
+    
+    .player {
+      padding: 15px 30px;
+      border-radius: 15px;
+      background: rgba(255, 255, 255, 0.1);
+      min-width: 150px;
+      font-weight: 600;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .player::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 5px;
+      background: transparent;
+      transition: background 0.3s ease;
+    }
+    
+    .player.active::before {
+      background: linear-gradient(90deg, #ff416c, #ff4b2b);
+    }
+    
+    .player.X::after {
+      content: 'X';
+      color: #ff416c;
+      margin-left: 10px;
+      font-weight: 700;
+    }
+    
+    .player.O::after {
+      content: 'O';
+      color: #42a5f5;
+      margin-left: 10px;
+      font-weight: 700;
+    }
+    
+    .board-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+    
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-gap: 12px;
+      max-width: 500px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    }
+    
+    .cell {
+      aspect-ratio: 1;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 5rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .cell:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: scale(1.03);
+    }
+    
+    .cell.X {
+      color: #ff416c;
+      text-shadow: 0 0 15px rgba(255, 65, 108, 0.7);
+    }
+    
+    .cell.O {
+      color: #42a5f5;
+      text-shadow: 0 0 15px rgba(66, 165, 245, 0.7);
+    }
+    
+    .status {
+      font-size: 1.8rem;
+      font-weight: 600;
+      margin-bottom: 25px;
+      min-height: 50px;
+      padding: 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .status.win {
+      color: #4caf50;
+      background: rgba(76, 175, 80, 0.15);
+      animation: pulse 1.5s infinite;
+    }
+    
+    .status.draw {
+      color: #ff9800;
+      background: rgba(255, 152, 0, 0.15);
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    
+    .connection-panel {
+      margin: 30px 0;
+      padding: 25px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 15px;
+      text-align: center;
+    }
+    
+    .connection-box {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    .connection-box h3 {
+      font-size: 1.6rem;
+      margin-bottom: 20px;
+      color: #42a5f5;
+    }
+    
+    .connection-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 25px;
+      font-size: 1.2rem;
+    }
+    
+    .status-indicator {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #f44336;
+    }
+    
+    .status-indicator.connecting {
+      background: #ff9800;
+      animation: blink 1.5s infinite;
+    }
+    
+    .status-indicator.connected {
+      background: #4caf50;
+    }
+    
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    
     .room-controls {
       display: flex;
-      gap: 10px;
+      gap: 15px;
       justify-content: center;
       flex-wrap: wrap;
-      margin-bottom: 15px;
+      margin-bottom: 20px;
     }
+    
     .room-input {
-      max-width: 150px;
+      flex: 1;
+      max-width: 250px;
+      padding: 15px;
+      font-size: 1.1rem;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      background: rgba(0, 0, 0, 0.3);
+      color: white;
+      border-radius: 10px;
+      outline: none;
+    }
+    
+    .room-input:focus {
+      border-color: #42a5f5;
+      box-shadow: 0 0 10px rgba(66, 165, 245, 0.5);
+    }
+    
+    button {
+      padding: 15px 30px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .secondary {
+      background: linear-gradient(45deg, #2196f3, #21cbf3);
+      color: white;
+      min-width: 150px;
+    }
+    
+    .secondary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 7px 15px rgba(33, 150, 243, 0.4);
+    }
+    
+    #reset {
+      background: linear-gradient(45deg, #ff416c, #ff4b2b);
+      color: white;
+      padding: 15px 40px;
+      font-size: 1.2rem;
+      margin-top: 20px;
+      width: 100%;
+      max-width: 300px;
+    }
+    
+    #reset:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 7px 15px rgba(255, 75, 43, 0.4);
+    }
+    
+    .instructions {
+      text-align: left;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 25px;
+      font-size: 1.1rem;
+    }
+    
+    .instructions strong {
+      display: block;
+      margin-bottom: 15px;
+      color: #ff9800;
+      font-size: 1.2rem;
+    }
+    
+    .instructions ol {
+      padding-left: 25px;
+    }
+    
+    .instructions li {
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+    
+    @media (max-width: 600px) {
+      .container {
+        padding: 15px;
+      }
+      
+      h1 {
+        font-size: 2rem;
+      }
+      
+      .mode-btn {
+        padding: 10px 15px;
+        font-size: 0.9rem;
+        min-width: 120px;
+      }
+      
+      .player {
+        padding: 10px 15px;
+        font-size: 1rem;
+        min-width: 120px;
+      }
+      
+      .cell {
+        font-size: 3.5rem;
+      }
+      
+      .status {
+        font-size: 1.4rem;
+      }
+      
+      .room-input, .secondary {
+        padding: 12px;
+        font-size: 1rem;
+      }
     }
   </style>
 </head>
@@ -29,11 +378,23 @@
     </div>
     
     <div class="player-indicator">
-      <div class="player X">玩家 X</div>
+      <div class="player X active">玩家 X</div>
       <div class="player O">玩家 O</div>
     </div>
     
-    <div class="board" id="board"></div>
+    <div class="board-container">
+      <div class="board" id="board">
+        <div class="cell" data-index="0"></div>
+        <div class="cell" data-index="1"></div>
+        <div class="cell" data-index="2"></div>
+        <div class="cell" data-index="3"></div>
+        <div class="cell" data-index="4"></div>
+        <div class="cell" data-index="5"></div>
+        <div class="cell" data-index="6"></div>
+        <div class="cell" data-index="7"></div>
+        <div class="cell" data-index="8"></div>
+      </div>
+    </div>
     
     <div class="status" id="status">玩家 X 回合</div>
     
@@ -54,9 +415,11 @@
         <div class="instructions">
           <strong>線上對戰操作步驟：</strong>
           <ol>
-            <li>點擊“創建房間”生成一個房間號並分享給對方</li>
-            <li>或輸入對方分享的房間號，點擊“加入房間”</li>
+            <li>點擊"創建房間"生成一個房間號並分享給對方</li>
+            <li>或輸入對方分享的房間號，點擊"加入房間"</li>
             <li>等待對方加入後開始遊戲</li>
+            <li>玩家X先行，玩家O後行</li>
+            <li>遊戲結束後可點擊"重新開始"按鈕繼續遊戲</li>
           </ol>
         </div>
       </div>
@@ -65,9 +428,6 @@
     <button id="reset">重新開始</button>
   </div>
 
-  <!-- 引入 SimplePeer -->
-  <script src="https://cdn.jsdelivr.net/npm/simple-peer@9.11.1/simplepeer.min.js"></script>
-  <!-- 引入 WebSocket 客戶端 -->
   <script>
     // 遊戲狀態管理
     const game = {
@@ -91,24 +451,30 @@
 
       // 渲染棋盤
       render() {
-        const boardEl = document.getElementById("board");
-        boardEl.innerHTML = "";
+        const cells = document.querySelectorAll('.cell');
         
         this.board.forEach((cell, index) => {
-          const cellEl = document.createElement("div");
-          cellEl.className = `cell ${cell === "X" ? "X" : cell === "O" ? "O" : ""}`;
-          cellEl.dataset.index = index;
-          cellEl.textContent = cell || "";
+          cells[index].className = 'cell';
+          if (cell === "X") {
+            cells[index].classList.add('X');
+            cells[index].textContent = 'X';
+          } else if (cell === "O") {
+            cells[index].classList.add('O');
+            cells[index].textContent = 'O';
+          } else {
+            cells[index].textContent = '';
+          }
           
+          // 添加或移除點擊事件
           if (!this.isGameOver && 
               (this.mode === "hotseat" || 
                (this.mode === "pve" && this.currentPlayer === "X") ||
                (this.mode === "online" && this.currentPlayer === this.playerRole))
           ) {
-            cellEl.addEventListener("click", (e) => this.handlePlayerMove(e, index));
+            cells[index].addEventListener('click', (e) => this.handlePlayerMove(e, index));
+          } else {
+            cells[index].removeEventListener('click', (e) => this.handlePlayerMove(e, index));
           }
-          
-          boardEl.appendChild(cellEl);
         });
         
         const statusEl = document.getElementById("status");
@@ -533,5 +899,7 @@
       game.init();
     });
   </script>
+  <!-- 引入 SimplePeer -->
+  <script src="https://cdn.jsdelivr.net/npm/simple-peer@9.11.1/simplepeer.min.js"></script>
 </body>
 </html>
