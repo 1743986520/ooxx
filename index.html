@@ -721,25 +721,31 @@
         document.getElementById("roomId").value = roomId;
         
         // 連接到 WebSocket 服務器
-        const wsServer = "wss://hongyuwei.onrender.com"; // 修改為你的Render地址
+        const wsServer = "wss://hongyuwei.onrender.com";
+        console.log("正在连接到:", wsServer);
+        
         this.socket = new WebSocket(wsServer);
+        
         this.socket.onopen = () => {
+          console.log("WebSocket连接已建立");
           this.socket.send(JSON.stringify({ type: "create", roomId }));
           this.updateConnectionStatus("等待玩家加入房間 " + roomId, "connecting");
           this.setupPeer(true);
         };
         
         this.socket.onmessage = (event) => {
+          console.log("收到消息:", event.data);
           const msg = JSON.parse(event.data);
           this.handleSocketMessage(msg);
         };
         
         this.socket.onclose = () => {
+          console.log("WebSocket连接已关闭");
           this.updateConnectionStatus("服務器連接關閉", "disconnected");
         };
         
         this.socket.onerror = (err) => {
-          console.error("WebSocket 錯誤:", err);
+          console.error("WebSocket錯誤:", err);
           this.updateConnectionStatus("服務器連接錯誤", "disconnected");
         };
       },
@@ -753,50 +759,69 @@
           return;
         }
         
-        const wsServer = "wss://hongyuwei.onrender.com"; // 修改為你的Render地址
+        const wsServer = "wss://hongyuwei.onrender.com";
+        console.log("正在连接到:", wsServer);
+        
         this.socket = new WebSocket(wsServer);
+        
         this.socket.onopen = () => {
+          console.log("WebSocket连接已建立");
           this.socket.send(JSON.stringify({ type: "join", roomId }));
           this.updateConnectionStatus("正在加入房間 " + roomId, "connecting");
           this.setupPeer(false);
         };
         
         this.socket.onmessage = (event) => {
+          console.log("收到消息:", event.data);
           const msg = JSON.parse(event.data);
           this.handleSocketMessage(msg);
         };
         
         this.socket.onclose = () => {
+          console.log("WebSocket连接已关闭");
           this.updateConnectionStatus("服務器連接關閉", "disconnected");
         };
         
         this.socket.onerror = (err) => {
-          console.error("WebSocket 錯誤:", err);
+          console.error("WebSocket錯誤:", err);
           this.updateConnectionStatus("服務器連接錯誤", "disconnected");
         };
       },
 
       setupPeer(initiator) {
+        console.log("初始化WebRTC连接，initiator:", initiator);
+        
+        // 修复STUN服务器配置
+        const config = {
+          iceServers: [
+            { 
+              urls: [
+                "stun:stun.l.google.com:19302",
+                "stun:global.stun.twilio.com:3478?transport=udp"
+              ]
+            }
+          ]
+        };
+        
         this.peer = new SimplePeer({
           initiator,
           trickle: false,
-          config: {
-            iceServers: [
-              { urls: "stun:stun.l.google.com:19302" },
-              { urls: "stun:global.stun.twilio.com:3478?transport=udp" }
-            ]
-          }
+          config: config
         });
         
         this.peer.on("signal", (data) => {
-          this.socket.send(JSON.stringify({
-            type: "signal",
-            roomId: document.getElementById("roomId").value,
-            data
-          }));
+          console.log("发送信令数据:", data);
+          if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify({
+              type: "signal",
+              roomId: document.getElementById("roomId").value,
+              data
+            }));
+          }
         });
         
         this.peer.on("connect", () => {
+          console.log("WebRTC连接已建立");
           this.dataChannel = this.peer;
           this.updateConnectionStatus("已連接到對方玩家", "connected");
           this.reset();
@@ -811,6 +836,7 @@
         
         this.peer.on("data", (data) => {
           try {
+            console.log("收到网络消息:", data);
             const msg = JSON.parse(data);
             this.handleNetworkMessage(msg);
           } catch (e) {
@@ -819,18 +845,19 @@
         });
         
         this.peer.on("close", () => {
+          console.log("WebRTC连接已关闭");
           this.updateConnectionStatus("連接已關閉", "disconnected");
           this.dataChannel = null;
         });
         
         this.peer.on("error", (err) => {
-          console.error("WebRTC 錯誤:", err);
-          alert("連接錯誤: " + err.message);
-          this.updateConnectionStatus("連接錯誤", "disconnected");
+          console.error("WebRTC錯誤:", err);
+          this.updateConnectionStatus(`連接錯誤: ${err.message}`, "disconnected");
         });
       },
 
       handleSocketMessage(msg) {
+        console.log("处理服务器消息:", msg);
         switch (msg.type) {
           case "roomCreated":
             alert("房間創建成功，房間號: " + msg.roomId + "\n請分享給對方");
@@ -839,7 +866,9 @@
             this.updateConnectionStatus("房間已加入，等待連接...", "connecting");
             break;
           case "signal":
-            this.peer.signal(msg.data);
+            if (this.peer) {
+              this.peer.signal(msg.data);
+            }
             break;
           case "error":
             alert("錯誤: " + msg.message);
@@ -849,6 +878,7 @@
       },
 
       handleNetworkMessage(msg) {
+        console.log("处理网络消息:", msg);
         switch (msg.type) {
           case "move":
             this.board[msg.index] = msg.player;
@@ -868,6 +898,7 @@
       sendNetworkMessage(msg) {
         if (this.dataChannel && this.dataChannel.readyState === "open") {
           try {
+            console.log("发送网络消息:", msg);
             this.dataChannel.send(JSON.stringify(msg));
           } catch (e) {
             console.error("發送消息失敗:", e);
@@ -876,6 +907,7 @@
       },
 
       updateConnectionStatus(text, status) {
+        console.log("更新连接状态:", text, status);
         document.getElementById("connectionStatus").textContent = text;
         const indicator = document.getElementById("statusIndicator");
         indicator.className = "status-indicator";
