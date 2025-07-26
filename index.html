@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>极简协议井字棋</title>
+  <title>高效WebRTC井字棋</title>
   <style>
     * {
       box-sizing: border-box;
@@ -369,7 +369,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>极简协议井字棋</h1>
+    <h1>高效WebRTC井字棋</h1>
     
     <div class="mode-group">
       <button class="mode-btn active" data-mode="hotseat">本地雙人</button>
@@ -438,25 +438,8 @@
       socket: null,
       isHost: false,
       playerRole: "X",
-      
-      // 动作代码映射
-      ACTIONS: {
-        MOVE_0: 0,
-        MOVE_1: 1,
-        MOVE_2: 2,
-        MOVE_3: 3,
-        MOVE_4: 4,
-        MOVE_5: 5,
-        MOVE_6: 6,
-        MOVE_7: 7,
-        MOVE_8: 8,
-        RESET: 9,
-        SET_X: 10,
-        SET_O: 11,
-        WIN_X: 12,
-        WIN_O: 13,
-        DRAW: 14
-      },
+      roomId: "",
+      peerConnection: null,
 
       // 初始化遊戲
       init() {
@@ -524,30 +507,26 @@
         
         this.board[index] = this.currentPlayer;
         
-        if (this.mode === "online") {
-          // 发送动作代码
-          this.sendAction(this.ACTIONS[`MOVE_${index}`]);
+        if (this.mode === "online" && this.socket && this.socket.readyState === WebSocket.OPEN) {
+          // 发送极简指令：位置索引
+          this.socket.send(JSON.stringify({
+            type: "move",
+            pos: index
+          }));
         }
         
         this.render();
         this.updatePlayerIndicator();
         
-        // 检查游戏状态
         if (this.checkWin(this.currentPlayer)) {
           this.isGameOver = true;
           this.render();
-          if (this.mode === "online") {
-            this.sendAction(this.currentPlayer === "X" ? this.ACTIONS.WIN_X : this.ACTIONS.WIN_O);
-          }
           return;
         }
         
         if (this.checkDraw()) {
           this.isGameOver = true;
           this.render();
-          if (this.mode === "online") {
-            this.sendAction(this.ACTIONS.DRAW);
-          }
           return;
         }
         
@@ -673,8 +652,8 @@
         this.currentPlayer = "X";
         this.isGameOver = false;
         
-        if (this.mode === "online") {
-          this.sendAction(this.ACTIONS.RESET);
+        if (this.mode === "online" && this.socket && this.socket.readyState === WebSocket.OPEN) {
+          this.socket.send(JSON.stringify({ type: "reset" }));
         }
         
         this.updatePlayerIndicator();
@@ -727,8 +706,8 @@
         this.resetConnectionUI();
         
         // 生成隨機房間號
-        const roomId = Math.random().toString(36).substr(2, 6).toUpperCase();
-        document.getElementById("roomId").value = roomId;
+        this.roomId = Math.random().toString(36).substr(2, 6).toUpperCase();
+        document.getElementById("roomId").value = this.roomId;
         
         // 連接到 WebSocket 服務器
         const wsServer = "wss://hongyuwei.onrender.com";
@@ -740,14 +719,12 @@
           console.log("WebSocket连接已建立");
           this.socket.send(JSON.stringify({ 
             type: "create", 
-            roomId 
+            roomId: this.roomId 
           }));
-          this.updateConnectionStatus("等待玩家加入房間 " + roomId, "connecting");
-          this.sendAction(this.ACTIONS.SET_X); // 设置自己为X
+          this.updateConnectionStatus("等待玩家加入房間 " + this.roomId, "connecting");
         };
         
         this.socket.onmessage = (event) => {
-          console.log("收到消息:", event.data);
           const msg = JSON.parse(event.data);
           this.handleSocketMessage(msg);
         };
@@ -766,8 +743,8 @@
       joinRoom() {
         this.isHost = false;
         this.playerRole = "O";
-        const roomId = document.getElementById("roomId").value.trim();
-        if (!roomId) {
+        this.roomId = document.getElementById("roomId").value.trim();
+        if (!this.roomId) {
           alert("請輸入房間號");
           return;
         }
@@ -781,14 +758,12 @@
           console.log("WebSocket连接已建立");
           this.socket.send(JSON.stringify({ 
             type: "join", 
-            roomId 
+            roomId: this.roomId 
           }));
-          this.updateConnectionStatus("正在加入房間 " + roomId, "connecting");
-          this.sendAction(this.ACTIONS.SET_O); // 设置自己为O
+          this.updateConnectionStatus("正在加入房間 " + this.roomId, "connecting");
         };
         
         this.socket.onmessage = (event) => {
-          console.log("收到消息:", event.data);
           const msg = JSON.parse(event.data);
           this.handleSocketMessage(msg);
         };
@@ -803,85 +778,57 @@
           this.updateConnectionStatus("服務器連接錯誤", "disconnected");
         };
       },
-      
-      sendAction(actionCode) {
-        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-          this.socket.send(JSON.stringify({
-            type: "action",
-            code: actionCode
-          }));
-        }
-      },
 
       handleSocketMessage(msg) {
+        console.log("收到服务器消息:", msg);
+        
         switch (msg.type) {
-          case "action":
-            this.handleAction(msg.code);
+          case "room_created":
+            this.updateConnectionStatus("房間已創建，等待玩家加入", "connecting");
             break;
-          case "roomCreated":
-            alert("房間創建成功，房間號: " + msg.roomId + "\n請分享給對方");
+            
+          case "room_joined":
+            this.updateConnectionStatus("已加入房間，等待開始", "connecting");
             break;
-          case "roomJoined":
-            this.updateConnectionStatus("房間已加入，等待連接...", "connecting");
+            
+          case "player_joined":
+            this.updateConnectionStatus("對方玩家已加入", "connected");
+            // 发送角色信息
+            this.socket.send(JSON.stringify({ 
+              type: "role", 
+              role: this.playerRole 
+            }));
             break;
+            
+          case "role":
+            if (msg.role) {
+              this.playerRole = msg.role;
+              this.updatePlayerIndicator();
+            }
+            break;
+            
+          case "move":
+            if (msg.pos !== undefined) {
+              this.board[msg.pos] = this.currentPlayer;
+              this.currentPlayer = this.currentPlayer === "X" ? "O" : "X";
+              this.render();
+              this.updatePlayerIndicator();
+            }
+            break;
+            
+          case "reset":
+            this.reset();
+            break;
+            
           case "error":
             alert("錯誤: " + msg.message);
             this.updateConnectionStatus("連接錯誤", "disconnected");
             break;
         }
       },
-      
-      handleAction(code) {
-        console.log("处理动作代码:", code);
-        
-        // 0-8: 落子位置
-        if (code >= 0 && code <= 8) {
-          if (this.board[code] === null && !this.isGameOver) {
-            this.board[code] = this.currentPlayer;
-            this.currentPlayer = this.currentPlayer === "X" ? "O" : "X";
-            this.render();
-            this.updatePlayerIndicator();
-          }
-        }
-        // 9: 重置游戏
-        else if (code === this.ACTIONS.RESET) {
-          this.reset();
-        }
-        // 10: 设置为X
-        else if (code === this.ACTIONS.SET_X) {
-          this.playerRole = "X";
-        }
-        // 11: 设置为O
-        else if (code === this.ACTIONS.SET_O) {
-          this.playerRole = "O";
-        }
-        // 12: X获胜
-        else if (code === this.ACTIONS.WIN_X) {
-          this.isGameOver = true;
-          this.board = Array(9).fill(null);
-          const statusEl = document.getElementById("status");
-          statusEl.textContent = "玩家 X 獲勝！";
-          statusEl.className = "status win";
-        }
-        // 13: O获胜
-        else if (code === this.ACTIONS.WIN_O) {
-          this.isGameOver = true;
-          this.board = Array(9).fill(null);
-          const statusEl = document.getElementById("status");
-          statusEl.textContent = "玩家 O 獲勝！";
-          statusEl.className = "status win";
-        }
-        // 14: 平局
-        else if (code === this.ACTIONS.DRAW) {
-          this.isGameOver = true;
-          this.board = Array(9).fill(null);
-          const statusEl = document.getElementById("status");
-          statusEl.textContent = "平局！";
-          statusEl.className = "status draw";
-        }
-      },
 
       updateConnectionStatus(text, status) {
+        console.log("更新连接状态:", text, status);
         document.getElementById("connectionStatus").textContent = text;
         const indicator = document.getElementById("statusIndicator");
         indicator.className = "status-indicator";
