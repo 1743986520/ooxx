@@ -434,7 +434,7 @@
   </div>
 
   <script>
-    // 游戏状态管理
+    // 遊戲狀態管理
     const game = {
       board: Array(9).fill(null),
       currentPlayer: "X",
@@ -513,6 +513,26 @@
           playerEl.classList.remove("active");
           if (playerEl.textContent.includes(this.currentPlayer)) {
             playerEl.classList.add("active");
+          }
+          
+          // 在線上模式顯示玩家角色
+          if (this.mode === "online" && this.connectionEstablished) {
+            if (playerEl.classList.contains("X") && this.playerRole === "X") {
+              playerEl.textContent = "您 (X)";
+            } else if (playerEl.classList.contains("O") && this.playerRole === "O") {
+              playerEl.textContent = "您 (O)";
+            } else if (playerEl.classList.contains("X") && this.playerRole === "O") {
+              playerEl.textContent = "對手 (X)";
+            } else if (playerEl.classList.contains("O") && this.playerRole === "X") {
+              playerEl.textContent = "對手 (O)";
+            }
+          } else {
+            // 非線上模式恢復默認顯示
+            if (playerEl.classList.contains("X")) {
+              playerEl.textContent = "玩家 X";
+            } else {
+              playerEl.textContent = "玩家 O";
+            }
           }
         });
       },
@@ -692,11 +712,21 @@
 
       reset() {
         this.board = Array(9).fill(null);
-        this.currentPlayer = "X";
         this.isGameOver = false;
         
-        if (this.mode === "online" && this.socket && this.socket.readyState === WebSocket.OPEN) {
-          this.socket.send(JSON.stringify({ type: "reset" }));
+        // 重置玩家順序，主機永遠是X，客戶端永遠是O
+        if (this.mode === "online" && this.connectionEstablished) {
+          this.currentPlayer = "X"; // 總是從X開始
+          
+          // 發送重置指令
+          if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify({ 
+              type: "reset",
+              role: this.playerRole
+            }));
+          }
+        } else {
+          this.currentPlayer = "X";
         }
         
         this.updatePlayerIndicator();
@@ -869,7 +899,21 @@
             break;
             
           case "reset":
-            this.reset();
+            // 重置遊戲狀態
+            this.board = Array(9).fill(null);
+            this.isGameOver = false;
+            
+            // 確保主機永遠是X，客戶端永遠是O
+            if (this.isHost) {
+              this.playerRole = "X";
+              this.currentPlayer = "X";
+            } else {
+              this.playerRole = "O";
+              this.currentPlayer = "X"; // 總是從X開始
+            }
+            
+            this.render();
+            this.updatePlayerIndicator();
             break;
             
           case "error":
