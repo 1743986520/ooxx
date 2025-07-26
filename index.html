@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>高效井字棋游戏</title>
+  <title>井字棋</title>
   <style>
     * {
       box-sizing: border-box;
@@ -369,7 +369,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>高效井字棋遊戲</h1>
+    <h1>高效WebRTC井字棋</h1>
     
     <div class="mode-group">
       <button class="mode-btn active" data-mode="hotseat">本地雙人</button>
@@ -439,7 +439,8 @@
       isHost: false,
       playerRole: "X",
       roomId: "",
-      connectedPlayer: false, // 跟踪是否已连接玩家
+      peerConnection: null,
+      connectionEstablished: false,
 
       // 初始化遊戲
       init() {
@@ -468,7 +469,7 @@
           if (!this.isGameOver && 
               (this.mode === "hotseat" || 
                (this.mode === "pve" && this.currentPlayer === "X") ||
-               (this.mode === "online" && this.currentPlayer === this.playerRole))
+               (this.mode === "online" && this.connectionEstablished && this.currentPlayer === this.playerRole))
           ) {
             cells[index].addEventListener('click', (e) => this.handlePlayerMove(e, index));
           } else {
@@ -511,7 +512,8 @@
           // 发送极简指令：位置索引
           this.socket.send(JSON.stringify({
             type: "move",
-            pos: index
+            pos: index,
+            player: this.currentPlayer
           }));
         }
         
@@ -530,12 +532,12 @@
           return;
         }
         
-        if (this.mode === "hotseat" || this.mode === "online") {
-          this.currentPlayer = this.currentPlayer === "X" ? "O" : "X";
-          this.updatePlayerIndicator();
-        } else if (this.mode === "pve") {
-          this.currentPlayer = "O";
-          this.updatePlayerIndicator();
+        // 切换玩家
+        this.currentPlayer = this.currentPlayer === "X" ? "O" : "X";
+        this.updatePlayerIndicator();
+        
+        // 如果是单人模式，轮到AI
+        if (this.mode === "pve" && this.currentPlayer === "O") {
           setTimeout(() => this.aiMove(), 500);
         }
       },
@@ -584,15 +586,15 @@
         }
       },
 
-      checkGameEnd(aiPlayer) {
-        if (this.checkWin(aiPlayer)) {
+      checkGameEnd(player) {
+        if (this.checkWin(player)) {
           this.isGameOver = true;
           this.render();
         } else if (this.checkDraw()) {
           this.isGameOver = true;
           this.render();
         } else {
-          this.currentPlayer = "X";
+          this.currentPlayer = player === "X" ? "O" : "X";
           this.updatePlayerIndicator();
           this.render();
         }
@@ -679,6 +681,7 @@
             this.socket.close();
             this.socket = null;
           }
+          this.connectionEstablished = false;
           this.updateConnectionStatus("未連接", "disconnected");
         }
         
@@ -688,7 +691,6 @@
       resetConnectionUI() {
         document.getElementById("roomId").value = "";
         this.updateConnectionStatus("未連接", "disconnected");
-        this.connectedPlayer = false;
       },
 
       initWebSocket() {
@@ -732,11 +734,13 @@
         
         this.socket.onclose = () => {
           console.log("WebSocket连接已关闭");
+          this.connectionEstablished = false;
           this.updateConnectionStatus("服務器連接關閉", "disconnected");
         };
         
         this.socket.onerror = (err) => {
           console.error("WebSocket錯誤:", err);
+          this.connectionEstablished = false;
           this.updateConnectionStatus("服務器連接錯誤", "disconnected");
         };
       },
@@ -771,11 +775,13 @@
         
         this.socket.onclose = () => {
           console.log("WebSocket连接已关闭");
+          this.connectionEstablished = false;
           this.updateConnectionStatus("服務器連接關閉", "disconnected");
         };
         
         this.socket.onerror = (err) => {
           console.error("WebSocket錯誤:", err);
+          this.connectionEstablished = false;
           this.updateConnectionStatus("服務器連接錯誤", "disconnected");
         };
       },
@@ -789,32 +795,38 @@
             break;
             
           case "room_joined":
-            this.updateConnectionStatus("已加入房間，等待開始", "connecting");
+            this.connectionEstablished = true;
+            this.updateConnectionStatus("已加入房間，等待開始", "connected");
             break;
             
           case "player_joined":
+            this.connectionEstablished = true;
             this.updateConnectionStatus("對方玩家已加入", "connected");
-            this.connectedPlayer = true;
-            // 发送角色信息
-            this.socket.send(JSON.stringify({ 
-              type: "role", 
-              role: this.playerRole 
-            }));
+            this.render(); // 更新棋盘状态
             break;
             
           case "role":
             if (msg.role) {
               this.playerRole = msg.role;
               this.updatePlayerIndicator();
-              this.updateConnectionStatus("已連接到房間", "connected");
-              this.connectedPlayer = true;
             }
             break;
             
           case "move":
             if (msg.pos !== undefined) {
-              this.board[msg.pos] = this.currentPlayer;
-              this.currentPlayer = this.currentPlayer === "X" ? "O" : "X";
+              // 更新棋盘
+              this.board[msg.pos] = msg.player;
+              
+              // 检查游戏状态
+              if (this.checkWin(msg.player)) {
+                this.isGameOver = true;
+              } else if (this.checkDraw()) {
+                this.isGameOver = true;
+              } else {
+                // 切换当前玩家
+                this.currentPlayer = msg.player === "X" ? "O" : "X";
+              }
+              
               this.render();
               this.updatePlayerIndicator();
             }
@@ -826,6 +838,7 @@
             
           case "error":
             alert("錯誤: " + msg.message);
+            this.connectionEstablished = false;
             this.updateConnectionStatus("連接錯誤", "disconnected");
             break;
         }
