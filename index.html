@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>井字棋</title>
+  <title>WebRTC井字棋</title>
   <style>
     * {
       box-sizing: border-box;
@@ -166,6 +166,11 @@
     .cell.O {
       color: #42a5f5;
       text-shadow: 0 0 15px rgba(66, 165, 245, 0.7);
+    }
+    
+    .cell.disabled {
+      cursor: not-allowed;
+      opacity: 0.7;
     }
     
     .status {
@@ -369,7 +374,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>高效WebRTC井字棋</h1>
+    <h1>WebRTC井字棋</h1>
     
     <div class="mode-group">
       <button class="mode-btn active" data-mode="hotseat">本地雙人</button>
@@ -439,7 +444,6 @@
       isHost: false,
       playerRole: "X",
       roomId: "",
-      peerConnection: null,
       connectionEstablished: false,
 
       // 初始化遊戲
@@ -471,8 +475,10 @@
                (this.mode === "pve" && this.currentPlayer === "X") ||
                (this.mode === "online" && this.connectionEstablished && this.currentPlayer === this.playerRole))
           ) {
+            cells[index].classList.remove("disabled");
             cells[index].addEventListener('click', (e) => this.handlePlayerMove(e, index));
           } else {
+            cells[index].classList.add("disabled");
             cells[index].removeEventListener('click', (e) => this.handlePlayerMove(e, index));
           }
         });
@@ -490,7 +496,15 @@
             statusEl.classList.add("draw");
           }
         } else {
-          statusEl.textContent = `玩家 ${this.currentPlayer} 回合`;
+          if (this.mode === "online" && this.connectionEstablished) {
+            if (this.currentPlayer === this.playerRole) {
+              statusEl.textContent = `您的回合 (玩家 ${this.currentPlayer})`;
+            } else {
+              statusEl.textContent = `等待對方玩家下棋 (玩家 ${this.currentPlayer})`;
+            }
+          } else {
+            statusEl.textContent = `玩家 ${this.currentPlayer} 回合`;
+          }
         }
       },
       
@@ -504,6 +518,11 @@
       },
 
       handlePlayerMove(e, index) {
+        // 在线模式验证：确保玩家只能在自己的回合操作
+        if (this.mode === "online" && this.currentPlayer !== this.playerRole) {
+          return;
+        }
+        
         if (this.board[index] !== null || this.isGameOver) return;
         
         this.board[index] = this.currentPlayer;
@@ -516,9 +535,6 @@
             player: this.currentPlayer
           }));
         }
-        
-        this.render();
-        this.updatePlayerIndicator();
         
         if (this.checkWin(this.currentPlayer)) {
           this.isGameOver = true;
@@ -534,11 +550,15 @@
         
         // 切换玩家
         this.currentPlayer = this.currentPlayer === "X" ? "O" : "X";
-        this.updatePlayerIndicator();
         
         // 如果是单人模式，轮到AI
         if (this.mode === "pve" && this.currentPlayer === "O") {
+          this.render();
+          this.updatePlayerIndicator();
           setTimeout(() => this.aiMove(), 500);
+        } else {
+          this.render();
+          this.updatePlayerIndicator();
         }
       },
 
@@ -548,23 +568,44 @@
         const winPos = this.findWinOrBlock("O");
         if (winPos !== -1) {
           this.board[winPos] = "O";
+          if (this.checkWin("O")) {
+            this.isGameOver = true;
+          } else if (this.checkDraw()) {
+            this.isGameOver = true;
+          } else {
+            this.currentPlayer = "X";
+          }
           this.render();
-          this.checkGameEnd("O");
+          this.updatePlayerIndicator();
           return;
         }
         
         const blockPos = this.findWinOrBlock("X");
         if (blockPos !== -1) {
           this.board[blockPos] = "O";
+          if (this.checkWin("O")) {
+            this.isGameOver = true;
+          } else if (this.checkDraw()) {
+            this.isGameOver = true;
+          } else {
+            this.currentPlayer = "X";
+          }
           this.render();
-          this.checkGameEnd("O");
+          this.updatePlayerIndicator();
           return;
         }
         
         if (this.board[4] === null) {
           this.board[4] = "O";
+          if (this.checkWin("O")) {
+            this.isGameOver = true;
+          } else if (this.checkDraw()) {
+            this.isGameOver = true;
+          } else {
+            this.currentPlayer = "X";
+          }
           this.render();
-          this.checkGameEnd("O");
+          this.updatePlayerIndicator();
           return;
         }
         
@@ -572,8 +613,15 @@
         if (corners.length > 0) {
           const corner = corners[Math.floor(Math.random() * corners.length)];
           this.board[corner] = "O";
+          if (this.checkWin("O")) {
+            this.isGameOver = true;
+          } else if (this.checkDraw()) {
+            this.isGameOver = true;
+          } else {
+            this.currentPlayer = "X";
+          }
           this.render();
-          this.checkGameEnd("O");
+          this.updatePlayerIndicator();
           return;
         }
         
@@ -581,22 +629,15 @@
         if (edges.length > 0) {
           const edge = edges[Math.floor(Math.random() * edges.length)];
           this.board[edge] = "O";
+          if (this.checkWin("O")) {
+            this.isGameOver = true;
+          } else if (this.checkDraw()) {
+            this.isGameOver = true;
+          } else {
+            this.currentPlayer = "X";
+          }
           this.render();
-          this.checkGameEnd("O");
-        }
-      },
-
-      checkGameEnd(player) {
-        if (this.checkWin(player)) {
-          this.isGameOver = true;
-          this.render();
-        } else if (this.checkDraw()) {
-          this.isGameOver = true;
-          this.render();
-        } else {
-          this.currentPlayer = player === "X" ? "O" : "X";
           this.updatePlayerIndicator();
-          this.render();
         }
       },
 
@@ -797,19 +838,14 @@
           case "room_joined":
             this.connectionEstablished = true;
             this.updateConnectionStatus("已加入房間，等待開始", "connected");
+            this.playerRole = msg.role;
+            this.updatePlayerIndicator();
             break;
             
           case "player_joined":
             this.connectionEstablished = true;
             this.updateConnectionStatus("對方玩家已加入", "connected");
-            this.render(); // 更新棋盘状态
-            break;
-            
-          case "role":
-            if (msg.role) {
-              this.playerRole = msg.role;
-              this.updatePlayerIndicator();
-            }
+            this.render();
             break;
             
           case "move":
