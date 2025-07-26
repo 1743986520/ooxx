@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>高效WebRTC井字棋</title>
+  <title>高效井字棋游戏</title>
   <style>
     * {
       box-sizing: border-box;
@@ -369,7 +369,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>高效WebRTC井字棋</h1>
+    <h1>高效井字棋遊戲</h1>
     
     <div class="mode-group">
       <button class="mode-btn active" data-mode="hotseat">本地雙人</button>
@@ -439,7 +439,7 @@
       isHost: false,
       playerRole: "X",
       roomId: "",
-      peerConnection: null,
+      connectedPlayer: false, // 跟踪是否已连接玩家
 
       // 初始化遊戲
       init() {
@@ -688,6 +688,7 @@
       resetConnectionUI() {
         document.getElementById("roomId").value = "";
         this.updateConnectionStatus("未連接", "disconnected");
+        this.connectedPlayer = false;
       },
 
       initWebSocket() {
@@ -793,6 +794,7 @@
             
           case "player_joined":
             this.updateConnectionStatus("對方玩家已加入", "connected");
+            this.connectedPlayer = true;
             // 发送角色信息
             this.socket.send(JSON.stringify({ 
               type: "role", 
@@ -804,6 +806,8 @@
             if (msg.role) {
               this.playerRole = msg.role;
               this.updatePlayerIndicator();
+              this.updateConnectionStatus("已連接到房間", "connected");
+              this.connectedPlayer = true;
             }
             break;
             
