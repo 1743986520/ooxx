@@ -336,6 +336,93 @@
       line-height: 1.5;
     }
     
+    /* 聊天框样式 */
+    .chat-box {
+      margin-top: 20px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 10px;
+      padding: 15px;
+    }
+    
+    .chat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    
+    .chat-messages {
+      height: 150px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      border: 1px solid #333;
+      padding: 10px;
+      border-radius: 5px;
+      background: rgba(0, 0, 0, 0.3);
+    }
+    
+    .message {
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+    
+    .message.self {
+      color: #4caf50;
+      text-align: right;
+    }
+    
+    .message.opponent {
+      color: #42a5f5;
+    }
+    
+    .chat-input {
+      display: flex;
+      gap: 10px;
+    }
+    
+    #chatInput {
+      flex: 1;
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+    
+    #chatInput::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+    
+    #sendChat {
+      padding: 10px 20px;
+      background: linear-gradient(45deg, #2196f3, #21cbf3);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    #sendChat:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4);
+    }
+    
+    .char-count {
+      font-size: 0.8rem;
+      text-align: right;
+      margin-top: 5px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .char-count.warning {
+      color: #ff9800;
+    }
+    
+    .char-count.error {
+      color: #f44336;
+    }
+    
     @media (max-width: 600px) {
       .container {
         padding: 15px;
@@ -368,6 +455,10 @@
       .room-input, .secondary {
         padding: 12px;
         font-size: 1rem;
+      }
+      
+      .chat-messages {
+        height: 100px;
       }
     }
   </style>
@@ -430,6 +521,24 @@
       </div>
     </div>
     
+    <div class="chat-box" id="chatBox" style="display: none;">
+      <div class="chat-header">
+        <h3>聊天室</h3>
+        <div class="connection-status">
+          <div class="status-indicator" id="chatStatusIndicator"></div>
+          <span id="chatConnectionStatus">未連接</span>
+        </div>
+      </div>
+      
+      <div class="chat-messages" id="chatMessages"></div>
+      
+      <div class="chat-input">
+        <input type="text" id="chatInput" maxlength="30" placeholder="輸入消息（最多30字）">
+        <button id="sendChat">發送</button>
+      </div>
+      <div class="char-count" id="charCount">0/30</div>
+    </div>
+    
     <button id="reset">重新開始</button>
   </div>
 
@@ -451,6 +560,7 @@
         this.render();
         this.bindEvents();
         this.updatePlayerIndicator();
+        this.chat.init();
       },
 
       // 渲染棋盤
@@ -745,9 +855,11 @@
         const connectionPanel = document.getElementById("connectionPanel");
         if (mode === "online") {
           connectionPanel.style.display = "block";
+          this.chat.show();
           this.resetConnectionUI();
         } else {
           connectionPanel.style.display = "none";
+          this.chat.hide();
           if (this.socket) {
             this.socket.close();
             this.socket = null;
@@ -916,6 +1028,10 @@
             this.updatePlayerIndicator();
             break;
             
+          case "chat":
+            this.chat.handleChatMessage(msg.sender, msg.message);
+            break;
+            
           case "error":
             alert("錯誤: " + msg.message);
             this.connectionEstablished = false;
@@ -945,6 +1061,116 @@
         });
         
         this.initWebSocket();
+      },
+      
+      // 聊天功能
+      chat: {
+        messages: [],
+        chatBox: null,
+        chatMessages: null,
+        chatInput: null,
+        sendChatBtn: null,
+        charCount: null,
+        chatStatusIndicator: null,
+        chatConnectionStatus: null,
+        
+        // 初始化聊天
+        init() {
+          this.messages = [];
+          this.chatBox = document.getElementById("chatBox");
+          this.chatMessages = document.getElementById("chatMessages");
+          this.chatInput = document.getElementById("chatInput");
+          this.sendChatBtn = document.getElementById("sendChat");
+          this.charCount = document.getElementById("charCount");
+          this.chatStatusIndicator = document.getElementById("chatStatusIndicator");
+          this.chatConnectionStatus = document.getElementById("chatConnectionStatus");
+          
+          // 绑定事件
+          this.sendChatBtn.addEventListener("click", () => this.sendMessage());
+          this.chatInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") this.sendMessage();
+          });
+          
+          // 字符计数
+          this.chatInput.addEventListener("input", () => {
+            const length = this.chatInput.value.length;
+            this.charCount.textContent = `${length}/30`;
+            this.charCount.className = "char-count";
+            
+            if (length > 25) this.charCount.classList.add("warning");
+            if (length > 29) this.charCount.classList.add("error");
+          });
+        },
+        
+        // 显示聊天框
+        show() {
+          this.chatBox.style.display = "block";
+        },
+        
+        // 隐藏聊天框
+        hide() {
+          this.chatBox.style.display = "none";
+        },
+        
+        // 更新连接状态
+        updateConnectionStatus(text, status) {
+          this.chatConnectionStatus.textContent = text;
+          this.chatStatusIndicator.className = "status-indicator";
+          
+          if (status === "connecting") {
+            this.chatStatusIndicator.classList.add("connecting");
+          } else if (status === "connected") {
+            this.chatStatusIndicator.classList.add("connected");
+          }
+        },
+        
+        // 发送消息
+        sendMessage() {
+          const message = this.chatInput.value.trim();
+          if (!message) return;
+          
+          if (message.length > 30) {
+            alert("消息不能超过30个字符");
+            return;
+          }
+          
+          // 添加到本地消息列表
+          this.addMessage("你", message, true);
+          this.chatInput.value = "";
+          this.charCount.textContent = "0/30";
+          this.charCount.className = "char-count";
+          
+          if (game.mode === "online" && game.connectionEstablished) {
+            // 发送到游戏服务器
+            game.socket.send(JSON.stringify({
+              type: "chat",
+              sender: game.playerRole,
+              message: message
+            }));
+          } else {
+            // 本地模式直接显示
+            setTimeout(() => {
+              this.addMessage("對手", "已收到消息", false);
+            }, 1000);
+          }
+        },
+        
+        // 添加消息到聊天框
+        addMessage(sender, message, isSelf) {
+          const messageEl = document.createElement("div");
+          messageEl.className = `message ${isSelf ? "self" : "opponent"}`;
+          messageEl.textContent = `${sender}: ${message}`;
+          this.chatMessages.appendChild(messageEl);
+          
+          // 自动滚动到底部
+          this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+        },
+        
+        // 处理收到的消息
+        handleChatMessage(sender, message) {
+          const isSelf = sender === game.playerRole;
+          this.addMessage(isSelf ? "你" : "對手", message, isSelf);
+        }
       }
     };
     
