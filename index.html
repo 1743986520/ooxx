@@ -423,32 +423,6 @@
       color: #f44336;
     }
     
-    /* 音效控制面板 */
-    .sound-control {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      background: rgba(0, 0, 0, 0.5);
-      border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-      z-index: 100;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-    }
-    
-    .sound-control i {
-      font-size: 24px;
-      color: white;
-    }
-    
-    .sound-control.muted i {
-      color: #ff416c;
-    }
-    
     @media (max-width: 600px) {
       .container {
         padding: 15px;
@@ -486,22 +460,10 @@
       .chat-messages {
         height: 100px;
       }
-      
-      .sound-control {
-        top: 10px;
-        right: 10px;
-        width: 40px;
-        height: 40px;
-      }
     }
   </style>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-  <div class="sound-control" id="soundControl">
-    <i class="fas fa-volume-up"></i>
-  </div>
-  
   <div class="container">
     <h1>OOXX</h1>
     
@@ -580,17 +542,6 @@
     <button id="reset">重新開始</button>
   </div>
 
-  <!-- 音效元素 -->
-  <audio id="moveSound" preload="auto">
-    <source src="https://assets.mixkit.co/sfx/preview/mixkit-unlock-game-notification-253.mp3" type="audio/mp3">
-  </audio>
-  <audio id="winSound" preload="auto">
-    <source src="https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3" type="audio/mp3">
-  </audio>
-  <audio id="loseSound" preload="auto">
-    <source src="https://assets.mixkit.co/sfx/preview/mixkit-retro-arcade-lose-2027.mp3" type="audio/mp3">
-  </audio>
-
   <script>
     // 遊戲狀態管理
     const game = {
@@ -603,8 +554,6 @@
       playerRole: "X",
       roomId: "",
       connectionEstablished: false,
-      resetTimer: null, // 自動重置計時器
-      soundEnabled: true, // 音效開關
 
       // 初始化遊戲
       init() {
@@ -612,38 +561,6 @@
         this.bindEvents();
         this.updatePlayerIndicator();
         this.chat.init();
-        this.initSoundControl();
-      },
-      
-      // 初始化音效控制
-      initSoundControl() {
-        const soundControl = document.getElementById("soundControl");
-        soundControl.addEventListener("click", () => {
-          this.soundEnabled = !this.soundEnabled;
-          soundControl.classList.toggle("muted", !this.soundEnabled);
-          soundControl.querySelector("i").className = this.soundEnabled ? 
-            "fas fa-volume-up" : "fas fa-volume-mute";
-        });
-      },
-
-      // 播放音效
-      playSound(type) {
-        if (!this.soundEnabled) return;
-        
-        const soundMap = {
-          "move": "moveSound",
-          "win": "winSound",
-          "lose": "loseSound"
-        };
-        
-        const soundId = soundMap[type];
-        if (!soundId) return;
-        
-        const sound = document.getElementById(soundId);
-        if (sound) {
-          sound.currentTime = 0;
-          sound.play().catch(e => console.log("播放音效失败:", e));
-        }
       },
 
       // 渲染棋盤
@@ -740,9 +657,6 @@
         
         this.board[index] = this.currentPlayer;
         
-        // 播放落子音效
-        this.playSound("move");
-        
         if (this.mode === "online" && this.socket && this.socket.readyState === WebSocket.OPEN) {
           // 发送极简指令：位置索引
           this.socket.send(JSON.stringify({
@@ -753,12 +667,14 @@
         }
         
         if (this.checkWin(this.currentPlayer)) {
-          this.handleGameEnd(this.currentPlayer);
+          this.isGameOver = true;
+          this.render();
           return;
         }
         
         if (this.checkDraw()) {
-          this.handleGameEnd(null);
+          this.isGameOver = true;
+          this.render();
           return;
         }
         
@@ -775,40 +691,6 @@
           this.updatePlayerIndicator();
         }
       },
-      
-      // 處理遊戲結束
-      handleGameEnd(winner) {
-        this.isGameOver = true;
-        this.render();
-        
-        // 清除之前的重置計時器
-        if (this.resetTimer) {
-          clearTimeout(this.resetTimer);
-        }
-        
-        // 設置5秒後自動重置
-        this.resetTimer = setTimeout(() => {
-          this.reset();
-        }, 5000);
-        
-        // 播放勝負音效
-        if (winner) {
-          if (this.mode === "online") {
-            // 在線模式 - 根據當前玩家角色播放音效
-            if (winner === this.playerRole) {
-              this.playSound("win");
-            } else {
-              this.playSound("lose");
-            }
-          } else {
-            // 本地模式 - 總是播放勝利音效（因為有人贏了）
-            this.playSound("win");
-          }
-        } else {
-          // 平局播放失敗音效
-          this.playSound("lose");
-        }
-      },
 
       aiMove() {
         if (this.isGameOver) return;
@@ -816,13 +698,10 @@
         const winPos = this.findWinOrBlock("O");
         if (winPos !== -1) {
           this.board[winPos] = "O";
-          // 播放落子音效
-          this.playSound("move");
-          
           if (this.checkWin("O")) {
-            this.handleGameEnd("O");
+            this.isGameOver = true;
           } else if (this.checkDraw()) {
-            this.handleGameEnd(null);
+            this.isGameOver = true;
           } else {
             this.currentPlayer = "X";
           }
@@ -834,13 +713,10 @@
         const blockPos = this.findWinOrBlock("X");
         if (blockPos !== -1) {
           this.board[blockPos] = "O";
-          // 播放落子音效
-          this.playSound("move");
-          
           if (this.checkWin("O")) {
-            this.handleGameEnd("O");
+            this.isGameOver = true;
           } else if (this.checkDraw()) {
-            this.handleGameEnd(null);
+            this.isGameOver = true;
           } else {
             this.currentPlayer = "X";
           }
@@ -851,13 +727,10 @@
         
         if (this.board[4] === null) {
           this.board[4] = "O";
-          // 播放落子音效
-          this.playSound("move");
-          
           if (this.checkWin("O")) {
-            this.handleGameEnd("O");
+            this.isGameOver = true;
           } else if (this.checkDraw()) {
-            this.handleGameEnd(null);
+            this.isGameOver = true;
           } else {
             this.currentPlayer = "X";
           }
@@ -870,13 +743,10 @@
         if (corners.length > 0) {
           const corner = corners[Math.floor(Math.random() * corners.length)];
           this.board[corner] = "O";
-          // 播放落子音效
-          this.playSound("move");
-          
           if (this.checkWin("O")) {
-            this.handleGameEnd("O");
+            this.isGameOver = true;
           } else if (this.checkDraw()) {
-            this.handleGameEnd(null);
+            this.isGameOver = true;
           } else {
             this.currentPlayer = "X";
           }
@@ -889,13 +759,10 @@
         if (edges.length > 0) {
           const edge = edges[Math.floor(Math.random() * edges.length)];
           this.board[edge] = "O";
-          // 播放落子音效
-          this.playSound("move");
-          
           if (this.checkWin("O")) {
-            this.handleGameEnd("O");
+            this.isGameOver = true;
           } else if (this.checkDraw()) {
-            this.handleGameEnd(null);
+            this.isGameOver = true;
           } else {
             this.currentPlayer = "X";
           }
@@ -954,12 +821,6 @@
       },
 
       reset() {
-        // 清除自動重置計時器
-        if (this.resetTimer) {
-          clearTimeout(this.resetTimer);
-          this.resetTimer = null;
-        }
-        
         this.board = Array(9).fill(null);
         this.isGameOver = false;
         
@@ -1134,14 +995,11 @@
               // 更新棋盘
               this.board[msg.pos] = msg.player;
               
-              // 播放落子音效（對手的移動）
-              this.playSound("move");
-              
               // 检查游戏状态
               if (this.checkWin(msg.player)) {
-                this.handleGameEnd(msg.player);
+                this.isGameOver = true;
               } else if (this.checkDraw()) {
-                this.handleGameEnd(null);
+                this.isGameOver = true;
               } else {
                 // 切换当前玩家
                 this.currentPlayer = msg.player === "X" ? "O" : "X";
@@ -1223,4 +1081,102 @@
           this.chatMessages = document.getElementById("chatMessages");
           this.chatInput = document.getElementById("chatInput");
           this.sendChatBtn = document.getElementById("sendChat");
-          this.charCount = documen
+          this.charCount = document.getElementById("charCount");
+          this.chatStatusIndicator = document.getElementById("chatStatusIndicator");
+          this.chatConnectionStatus = document.getElementById("chatConnectionStatus");
+          
+          // 绑定事件
+          this.sendChatBtn.addEventListener("click", () => this.sendMessage());
+          this.chatInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") this.sendMessage();
+          });
+          
+          // 字符计数
+          this.chatInput.addEventListener("input", () => {
+            const length = this.chatInput.value.length;
+            this.charCount.textContent = `${length}/30`;
+            this.charCount.className = "char-count";
+            
+            if (length > 25) this.charCount.classList.add("warning");
+            if (length > 29) this.charCount.classList.add("error");
+          });
+        },
+        
+        // 显示聊天框
+        show() {
+          this.chatBox.style.display = "block";
+        },
+        
+        // 隐藏聊天框
+        hide() {
+          this.chatBox.style.display = "none";
+        },
+        
+        // 更新连接状态
+        updateConnectionStatus(text, status) {
+          this.chatConnectionStatus.textContent = text;
+          this.chatStatusIndicator.className = "status-indicator";
+          
+          if (status === "connecting") {
+            this.chatStatusIndicator.classList.add("connecting");
+          } else if (status === "connected") {
+            this.chatStatusIndicator.classList.add("connected");
+          }
+        },
+        
+        // 发送消息
+        sendMessage() {
+          const message = this.chatInput.value.trim();
+          if (!message) return;
+          
+          if (message.length > 30) {
+            alert("消息不能超过30个字符");
+            return;
+          }
+          
+          // 添加到本地消息列表
+          this.addMessage("你", message, true);
+          this.chatInput.value = "";
+          this.charCount.textContent = "0/30";
+          this.charCount.className = "char-count";
+          
+          if (game.mode === "online" && game.connectionEstablished) {
+            // 发送到游戏服务器
+            game.socket.send(JSON.stringify({
+              type: "chat",
+              sender: game.playerRole,
+              message: message
+            }));
+          } else {
+            // 本地模式直接显示
+            setTimeout(() => {
+              this.addMessage("對手", "已收到消息", false);
+            }, 1000);
+          }
+        },
+        
+        // 添加消息到聊天框
+        addMessage(sender, message, isSelf) {
+          const messageEl = document.createElement("div");
+          messageEl.className = `message ${isSelf ? "self" : "opponent"}`;
+          messageEl.textContent = `${sender}: ${message}`;
+          this.chatMessages.appendChild(messageEl);
+          
+          // 自动滚动到底部
+          this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+        },
+        
+        // 处理收到的消息
+        handleChatMessage(sender, message) {
+          const isSelf = sender === game.playerRole;
+          this.addMessage(isSelf ? "你" : "對手", message, isSelf);
+        }
+      }
+    };
+    
+    document.addEventListener("DOMContentLoaded", () => {
+      game.init();
+    });
+  </script>
+</body>
+</html>
