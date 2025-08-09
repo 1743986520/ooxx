@@ -1,50 +1,34 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YPW2XNVN16"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-YPW2XNVN16');
-  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>遊戲大廳</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles/main.css">
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    
-    body {
-      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
-      color: white;
-      min-height: 100vh;
+    .game-lobby {
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
+      justify-content: center;
+      min-height: 100vh;
       padding: 20px;
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
     }
     
-    .container {
+    .game-container {
       background-color: rgba(0, 0, 0, 0.7);
       border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
       padding: 40px;
-      max-width: 800px;
-      width: 100%;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
       text-align: center;
+      max-width: 600px;
+      width: 100%;
     }
     
     h1 {
-      font-size: 3.5rem;
-      margin-bottom: 40px;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      font-size: 3rem;
+      margin-bottom: 30px;
       background: linear-gradient(to right, #ff8a00, #da1b60);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -53,116 +37,42 @@
     .game-buttons {
       display: flex;
       flex-direction: column;
-      gap: 25px;
-      margin: 40px 0;
+      gap: 20px;
     }
     
     .game-btn {
       background: linear-gradient(45deg, #2196f3, #21cbf3);
       color: white;
       border: none;
-      border-radius: 50px;
-      padding: 25px;
-      font-size: 1.8rem;
-      font-weight: 600;
+      padding: 20px 40px;
+      font-size: 1.5rem;
+      border-radius: 10px;
       cursor: pointer;
       transition: all 0.3s ease;
-      box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4);
-      position: relative;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 15px;
-    }
-    
-    .game-btn::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-      transition: 0.5s;
-    }
-    
-    .game-btn:hover::before {
-      left: 100%;
     }
     
     .game-btn:hover {
       transform: translateY(-5px);
-      box-shadow: 0 10px 20px rgba(33, 150, 243, 0.6);
+      box-shadow: 0 10px 20px rgba(33, 150, 243, 0.4);
+    }
+    
+    .game-btn.ooxx {
+      background: linear-gradient(45deg, #ff416c, #ff4b2b);
     }
     
     .game-btn.chess {
-      background: linear-gradient(45deg, #ff416c, #ff4b2b);
-      box-shadow: 0 5px 15px rgba(255, 75, 43, 0.4);
-    }
-    
-    .game-btn.chess:hover {
-      box-shadow: 0 10px 20px rgba(255, 75, 43, 0.6);
-    }
-    
-    .icon {
-      font-size: 2.5rem;
-    }
-    
-    .description {
-      margin-top: 30px;
-      font-size: 1.1rem;
-      line-height: 1.6;
-      color: #ddd;
-      background: rgba(0, 0, 0, 0.3);
-      padding: 20px;
-      border-radius: 15px;
-      text-align: left;
-    }
-    
-    .description h2 {
-      color: #ff9800;
-      margin-bottom: 15px;
-      text-align: center;
-    }
-    
-    @media (max-width: 600px) {
-      h1 {
-        font-size: 2.5rem;
-      }
-      
-      .game-btn {
-        padding: 20px;
-        font-size: 1.4rem;
-      }
-      
-      .icon {
-        font-size: 2rem;
-      }
+      background: linear-gradient(45deg, #4CAF50, #8BC34A);
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>遊戲大廳</h1>
-    
-    <div class="game-buttons">
-      <button class="game-btn" onclick="window.location.href='ooxx.html'">
-        <span class="icon">⭕❌</span> 圈圈擦擦
-      </button>
-      <button class="game-btn chess" onclick="window.location.href='chess.html'">
-        <span class="icon">♟️</span> 象棋
-      </button>
-    </div>
-    
-    <div class="description">
-      <h2>遊戲說明</h2>
-      <p>歡迎來到遊戲大廳！在這裡您可以選擇兩種不同的棋類遊戲：</p>
-      <ul style="margin-top: 15px; padding-left: 20px;">
-        <li><strong>圈圈擦擦（井字棋）</strong> - 經典的雙人對戰遊戲，支持本地雙人、單人對電腦和線上對戰模式</li>
-        <li><strong>象棋</strong> - 傳統中國象棋</li>
-      </ul>
-      <p style="margin-top: 15px;"></p>
+  <div class="game-lobby">
+    <div class="game-container">
+      <h1>選擇遊戲</h1>
+      <div class="game-buttons">
+        <button class="game-btn ooxx" onclick="location.href='ooxx.html'">圈圈叉叉</button>
+        <button class="game-btn chess" onclick="location.href='chess.html'">象棋</button>
+      </div>
     </div>
   </div>
 </body>
