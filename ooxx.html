@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>圈圈叉叉</title>
+  <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="styles/ooxx.css">
+</head>
+<body>
+  <div class="container">
+    <h1>OOXX</h1>
+    
+    <div class="mode-group">
+      <button class="mode-btn active" data-mode="hotseat">本地雙人</button>
+      <button class="mode-btn" data-mode="pve">單人模式</button>
+      <button class="mode-btn" data-mode="online">線上對戰</button>
+    </div>
+    
+    <div class="player-indicator">
+      <div class="player X active">玩家 X</div>
+      <div class="player O">玩家 O</div>
+    </div>
+    
+    <div class="board-container">
+      <div class="board" id="board">
+        <div class="cell" data-index="0"></div>
+        <div class="cell" data-index="1"></div>
+        <div class="cell" data-index="2"></div>
+        <div class="cell" data-index="3"></div>
+        <div class="cell" data-index="4"></div>
+        <div class="cell" data-index="5"></div>
+        <div class="cell" data-index="6"></div>
+        <div class="cell" data-index="7"></div>
+        <div class="cell" data-index="8"></div>
+      </div>
+    </div>
+    
+    <div class="status" id="status">玩家 X 回合</div>
+    
+    <div class="connection-panel" id="connectionPanel" style="display: none;">
+      <div class="connection-box">
+        <h3>線上對戰</h3>
+        <div class="connection-status">
+          <div class="status-indicator" id="statusIndicator"></div>
+          <span id="connectionStatus">未連接</span>
+        </div>
+        
+        <div class="room-controls">
+          <input type="text" id="roomId" class="room-input" placeholder="輸入房間號">
+          <button id="joinRoom" class="secondary">加入房間</button>
+          <button id="createRoom" class="secondary">創建房間</button>
+        </div>
+        
+        <div class="instructions">
+          <strong>線上對戰操作步驟：</strong>
+          <ol>
+            <li>點擊"創建房間"生成一個房間號並分享給對方</li>
+            <li>或輸入對方分享的房間號，點擊"加入房間"</li>
+            <li>等待對方加入後開始遊戲</li>
+            <li>玩家X先行，玩家O後行</li>
+            <li>遊戲結束後可點擊"重新開始"按鈕繼續遊戲</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+    
+    <div class="chat-box" id="chatBox" style="display: none;">
+      <div class="chat-header">
+        <h3>聊天室</h3>
+        <div class="connection-status">
+          <div class="status-indicator" id="chatStatusIndicator"></div>
+          <span id="chatConnectionStatus">未連接</span>
+        </div>
+      </div>
+      
+      <div class="chat-messages" id="chatMessages"></div>
+      
+      <div class="chat-input">
+        <input type="text" id="chatInput" maxlength="30" placeholder="輸入消息（最多30字）">
+        <button id="sendChat">發送</button>
+      </div>
+      <div class="char-count" id="charCount">0/30</div>
+    </div>
+    
+    <div class="action-buttons">
+      <button id="reset">重新開始</button>
+      <button id="backToLobby" class="secondary">返回大廳</button>
+    </div>
+  </div>
+
+  <script src="scripts/ooxx.js"></script>
+</body>
+</html>

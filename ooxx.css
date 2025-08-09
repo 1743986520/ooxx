@@ -1,0 +1,66 @@
+.board-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-gap: 12px;
+  max-width: 500px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.cell {
+  aspect-ratio: 1;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 5rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.cell:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.03);
+}
+
+.cell.X {
+  color: #ff416c;
+  text-shadow: 0 0 15px rgba(255, 65, 108, 0.7);
+}
+
+.cell.O {
+  color: #42a5f5;
+  text-shadow: 0 0 15px rgba(66, 165, 245, 0.7);
+}
+
+.cell.disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.player.X::after {
+  content: 'X';
+  color: #ff416c;
+  margin-left: 10px;
+  font-weight: 700;
+}
+
+.player.O::after {
+  content: 'O';
+  color: #42a5f5;
+  margin-left: 10px;
+  font-weight: 700;
+}

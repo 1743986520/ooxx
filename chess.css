@@ -1,0 +1,188 @@
+.board-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.chess-board {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(10, 1fr);
+  gap: 0;
+  width: 100%;
+  max-width: 600px;
+  background-color: #e8c58f;
+  border: 2px solid #5d4037;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.chess-row {
+  display: contents;
+}
+
+.chess-cell {
+  aspect-ratio: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  background-color: #e8c58f;
+}
+
+.chess-piece {
+  width: 85%;
+  height: 85%;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.8rem;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.chess-piece.red {
+  background: linear-gradient(145deg, #e53935, #c62828);
+  color: #fff;
+  border: 2px solid #b71c1c;
+}
+
+.chess-piece.black {
+  background: linear-gradient(145deg, #212121, #000);
+  color: #fff;
+  border: 2px solid #000;
+}
+
+.chess-piece.selected {
+  box-shadow: 0 0 15px 5px rgba(255, 255, 0, 0.7);
+  transform: scale(1.05);
+}
+
+/* 棋盤線條 */
+.chess-cell::before, .chess-cell::after {
+  content: '';
+  position: absolute;
+  background-color: #000;
+  z-index: 1;
+}
+
+/* 橫線 */
+.chess-row:not(:first-child) .chess-cell::before {
+  width: 100%;
+  height: 2px;
+  top: 0;
+  left: 0;
+}
+
+/* 豎線 */
+.chess-cell::after {
+  width: 2px;
+  height: 100%;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* 楚河漢界 */
+.river {
+  grid-column: 1 / span 9;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #e8c58f;
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #5d4037;
+  text-align: center;
+  padding: 10px 0;
+}
+
+.player.red::after {
+  content: '紅方';
+  color: #e53935;
+  margin-left: 10px;
+  font-weight: 700;
+}
+
+.player.black::after {
+  content: '黑方';
+  color: #212121;
+  margin-left: 10px;
+  font-weight: 700;
+}
+
+/* 特殊標記（九宮格） */
+.palace-mark {
+  position: absolute;
+  width: 40%;
+  height: 40%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.palace-mark::before, .palace-mark::after {
+  content: '';
+  position: absolute;
+  background-color: #000;
+}
+
+.palace-mark.top-left::before {
+  width: 2px;
+  height: 100%;
+  left: 0;
+  top: 0;
+}
+
+.palace-mark.top-left::after {
+  width: 100%;
+  height: 2px;
+  top: 0;
+  left: 0;
+}
+
+.palace-mark.top-right::before {
+  width: 2px;
+  height: 100%;
+  right: 0;
+  top: 0;
+}
+
+.palace-mark.top-right::after {
+  width: 100%;
+  height: 2px;
+  top: 0;
+  right: 0;
+}
+
+.palace-mark.bottom-left::before {
+  width: 2px;
+  height: 100%;
+  left: 0;
+  bottom: 0;
+}
+
+.palace-mark.bottom-left::after {
+  width: 100%;
+  height: 2px;
+  bottom: 0;
+  left: 0;
+}
+
+.palace-mark.bottom-right::before {
+  width: 2px;
+  height: 100%;
+  right: 0;
+  bottom: 0;
+}
+
+.palace-mark.bottom-right::after {
+  width: 100%;
+  height: 2px;
+  bottom: 0;
+  right: 0;
+}
