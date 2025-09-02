@@ -1144,7 +1144,6 @@
           }
           
           // 添加到本地消息列表
-          this.addMessage("你", message, true);
           this.chatInput.value = "";
           this.charCount.textContent = "0/30";
           this.charCount.className = "char-count";
@@ -1159,7 +1158,7 @@
           } else {
             // 本地模式直接显示
             setTimeout(() => {
-              this.addMessage("對手", "已收到消息", false);
+              this.addMessage("對手", "已收到消息", itSelf);
             }, 1000);
           }
         },
@@ -1178,7 +1177,7 @@
         // 处理收到的消息
         handleChatMessage(sender, message) {
           const isSelf = sender === game.playerRole;
-          this.addMessage(isSelf ? "你" : "對手", message, isSelf);
+          this.addMessage(isSelf ? "你" : "對手", message, false);
         }
       }
     };
